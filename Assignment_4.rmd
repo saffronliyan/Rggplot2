@@ -1,0 +1,128 @@
+---
+title: "Assignment 4"
+author: Yan Li
+date: August 21 2015
+output: word_document
+---
+
+#Load packages, data and set the working library:
+
+```{r}
+.libPaths("C:/work/Rpackages/R3.2.1")
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(mosaicData))
+suppressMessages(library(babynames))
+suppressMessages(library(fastR))
+suppressMessages(library(tidyr))
+suppressMessages(library(ggvis))
+suppressMessages(library(scales))
+
+#turn off warning messages
+options(warn=-1)
+
+#Set working directory
+setwd("C:\\work\\Rggplot2\\Lesson 4")
+```
+
+The data used in this assignmet is Texas:
+
+```{r}
+Texas <- read.csv("texas.csv")
+head(Texas,1)
+
+#Simplified the data: delete duplicated rows
+PopChoro <- unique(Texas[c("county", "long", "lat", "group", "order", "population", 
+"bin")])
+head(PopChoro,2)
+
+```
+
+
+The original plot of Texas data showing the population by county:
+
+```{r qplot1, fig.width = 10, fig.height = 8, message=FALSE}
+q <- qplot(long, lat, data = PopChoro, geom = "polygon", group = group, fill = bin)
+
+q
+```
+
+This assignment is to improve the plot by:
+
+1 Adding an informative title
+
+2 Choosing a better color scale
+
+3 Giving more informative title and keys on     the legend
+
+4 Removing the unnecessary x and y axis labels
+
+5 Making it look more like a map by giving it a white background.
+
+6 (Extra credit) Use a better coordination system (skim Chapter 6 "Positioning" for some ideas)
+
+#1 Adding an informative title
+
+```{r qplot2, fig.width = 10, fig.height = 8, message=FALSE}
+#Add texts by labs()
+myLabs<- labs(title="Population of Texas by County",
+x = "longitude of Texas (long)",
+y = "lattitude of Texas (lat)",
+fill = "population range (bin)")
+
+q+myLabs
+
+#Add some fomata and colors
+myTheme<- theme(plot.title = element_text(colour='navy', size=18, face='bold', family='serif'),
+  axis.title.x = element_text(colour='blue', size=14,  family='serif'),
+         axis.title.y = element_text(colour='blue', size=14,  family='serif')
+  )
+
+q+myLabs+myTheme
+```
+
+#2 Choosing a better color scale
+
+```{r qplot3, fig.width = 10, fig.height = 8, message=FALSE}
+#Use qulitative red pallete to show the populations change
+
+# qplot(long, lat, data = PopChoro)+ geom_polygon(aes(group= group, fill = bin))+scale_fill_brewer(type = "qual")
+
+myScale <- scale_fill_brewer(type = "qual", palette = "Reds")
+
+q+myLabs+myTheme+myScale
+```
+
+#3 Giving more informative title and keys on the legend
+
+The title was modified in question 1 by labs(). The following change the font color and size.
+
+```{r qplot4, fig.width = 10, fig.height = 8, message=FALSE}
+
+myTheme2 <- theme(legend.title = element_text(colour='red', size=10,  family='serif'),
+                  legend.text = element_text(colour='red', size=10,  family='serif'))
+
+q+myLabs+myTheme+myScale+myTheme2
+```
+
+#4 Removing the unnecessary x and y axis labels
+
+```{r qplot5, fig.width = 10, fig.height = 8, message=FALSE}
+
+myTheme3 <- theme(axis.text.x = element_blank(),
+axis.ticks.x = element_blank(),
+axis.text.y = element_blank(),
+axis.ticks.y = element_blank())
+
+q+myLabs+myTheme+myScale+myTheme2+myTheme3
+```
+
+#5 Making it look more like a map by giving it a white background.
+
+```{r qplot6, fig.width = 10, fig.height = 8, message=FALSE}
+myTheme4 <- theme(panel.grid.major=element_line(colour="white"),
+panel.grid.minor=element_line(colour="white"),
+panel.background=element_rect(fill=alpha("white",0.2)))
+
+q+myLabs+myTheme+myScale+myTheme2+myTheme3+myTheme4
+```

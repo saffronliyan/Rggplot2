@@ -1,0 +1,145 @@
+---
+title: "R ggplot2 Assignment 2"
+author: Yan Li
+date: Aug 8th 2015
+output: word_document
+---
+
+We first have to load the Required packages.
+
+```{r}
+#Load required packages in the user-defined library location
+.libPaths("C:/work/Rpackages/R3.2.1")
+suppressMessages(library(ggplot2, quietly = T))
+suppressMessages(library(dplyr, quietly = T))
+suppressMessages(library(mosaicData, quietly = T))
+
+#turn off warning messages
+options(warn=-1)
+```
+
+
+The data used for this assignment is mpg or diamonds from ggplot2 package.
+
+```{r}
+#Show the top 6 rows of the mpg/diamonds data to know the data information
+head(mpg)
+head(diamonds)
+```
+
+This assignment is to create 3 plots, each to answer one question and with 3-5 iterations to show the process.
+
+The first question is about the diamonds data: what is the price change along with the carat for different cut and clarity.
+
+First we see the price change with shape = cut and color = clarity:
+
+```{r ggplot1, fig.width = 8, fig.height = 6, message=FALSE }
+#Basic Model
+p <- ggplot( data=diamonds, aes(x=carat, y=price, shape = cut, color= clarity) ) 
+#Scatter plot 
+ p+ geom_point( alpha=0.1 )
+```
+
+It is not very clear to see the price change if the customer has a clear requirement of clarity and cut. And it takes a long time to get the plots (over 5 mins). So we can subset the data into different group based on clarity and cut:
+
+
+```{r ggplot2, fig.width = 8, fig.height = 6, message=FALSE }
+#Delete the shape to speed up the generation of the plot 
+p2 <- ggplot( data=diamonds, aes(x=carat, y=price, color= color ) )
+
+#Subset data to group based on clarity and cut
+#First we check facet = cut~.
+p2+ geom_point( alpha=0.3, size = I(2))+
+   facet_grid(cut~. )
+#Second we check facet = clarity ~.
+p2+ geom_point( alpha=0.3, size = I(2))+
+   facet_grid(clarity~. )
+#Last facet = clarity ~cut
+p2+ geom_point( alpha=0.3, size = I(2))+
+   facet_wrap(clarity~cut )
+
+#Add 2d density
+#Add title
+ p2+ geom_point( alpha=0.3, size = I(2))+
+   facet_wrap(clarity~cut )+stat_density2d(color = "black")  +
+  labs(title="Price vs. Carat", x="Carat of diamond", y="Price of Diamonds")
+```
+
+From the above plots, customers can easily find any combination of clarity and cut subgroup. Then they can further examine the price change.
+
+Second question is: How many choices do I have if my bugget of buying a diamond is $10,000-$12,000 (the range of the diamonds data  for price is $326-$18,823)? 
+
+This needs to limit the price range.
+
+```{r ggplot3, fig.width = 8, fig.height = 6, message=FALSE }
+##limit data range and set 'outlier' color
+require(scales)
+p3 <- ggplot( data=diamonds, aes(price, carat) ) 
+
+p3+
+geom_point(aes(color=price), size=2.5,alpha = 0.3) +
+   scale_color_gradient2(low=muted("light blue"), high=muted("dark blue"), mid="blue",
+                        midpoint = 11500, limits=c(10000,12000), na.value="gray")
+```
+
+
+Now We focus on the the price range(10000,12000).
+
+```{r ggplot4, fig.width = 8, fig.height = 6, message=FALSE }
+
+p3+geom_point(aes(colour = color))+
+  scale_x_continuous(limits=c(10000,12000))
+
+#Add shape, size and alpha to make a better looking plot
+p3+geom_point(aes(colour = color, shape= cut, size = 2.5, alpha = 0.3))+
+    scale_x_continuous(limits=c(10000,12000))
+
+```
+
+It is not easy to find cut,clarity features. So subsetting the data by clarity. 
+
+```{r ggplot5, fig.width = 8, fig.height = 6, message=FALSE }
+  p3+geom_point(aes(colour = color, shape = cut,size = 2.5, alpha = 0.3))+
+  facet_grid(clarity~.)+
+   scale_x_continuous(limits=c(10000,12000))+
+ labs(title="Daimonds Price $10000-$12000", x="Price of Diamonds", y="Carat of diamond")
+```
+
+Now we may want to limit the weight of the diamonds too:
+
+```{r ggplot6, fig.width = 8, fig.height = 6, message=FALSE }
+#Limit the carat
+p3+geom_point(aes(colour = color, shape = cut,size = 2.5, alpha = 0.3))+
+  facet_grid(clarity~.)+
+   scale_y_continuous(limits=c(0.5,1.5))+
+  scale_x_continuous(limits=c(10000,12000))+
+  labs(title="Daimonds Price $10000-$12000; Weight 0.75-1.5 carat", x="Price of Diamonds", y="Carat of diamond")
+```
+
+Now we can choose the diamonds based on our buget.
+
+The third plot is about: How does the geometric measures(table) of diamonds relate to the weight (carat)
+
+```{r ggplot7, fig.width = 8, fig.height = 6, message=FALSE }
+#2d histogram using hexagonal shape
+require(hexbin)
+p4 <- ggplot( diamonds, aes(x = carat, y=table) )
+
+p4 + stat_binhex()
+
+#2d kernel density
+p4 + stat_density2d()
+
+#combine the above two
+p4 + 
+  stat_binhex(aes(fill=..density..)) +
+  stat_density2d(color="gray75", size=.3)
+
+#Use tile showing the density
+p4  +xlim(1,3)+
+ # stat_binhex(aes(fill=..density..)) +
+  stat_density2d(geom = "tile",aes(fill=..density..),contour=F)+
+scale_fill_gradient(limit = c(1e-5,0.45))
+
+```
+

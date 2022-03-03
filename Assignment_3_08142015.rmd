@@ -1,0 +1,297 @@
+---
+title: "Assignment3_08142015"
+author: Yan Li
+date: August 14 2015
+output: word_document
+---
+
+#Load packages, data and set the working library:
+
+```{r}
+.libPaths("C:/work/Rpackages/R3.2.1")
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(mosaicData))
+suppressMessages(library(babynames))
+suppressMessages(library(fastR))
+suppressMessages(library(tidyr))
+suppressMessages(library(ggvis))
+
+#turn off warning messages
+options(warn=-1)
+```
+
+
+#Define some functions
+
+```{r}
+letter <- function(x, start=1, stop=start) {
+  # convert negative numbers to positions relative to end of string
+  n <- c(start,stop)
+  n <- ifelse( n < 0,  nchar(x) + n + 1, n )
+  tolower(substr(x, min(n), max(n)))
+}
+
+vowels <- function(x) {
+  nchar(gsub("[^aeiouy]", "", tolower(x)))
+}
+```
+
+
+#Data: babynames 
+```{r}
+head(babynames)
+```
+
+
+#Problems
+
+##1 Which names were most popular in 1999? 
+
+First this need two fields information: Year=1999 and name. 
+
+Secondly it needs to reorder the counts and find the max.
+
+```{r}
+#subset data by filter()
+Bnames1999<- babynames %>% filter(year == "1999")
+#reorder the dataframe
+arrange(Bnames1999,-Bnames1999$n)
+```
+Thus the top 5 popular names in 1999 are Jacob, Michael,Mattew,Josha,Emily.
+
+
+##2 Which names have the highest usage (on average)? 
+
+Group data by name and average the use (number of person use / number of years).
+
+```{r}
+
+BnamesByName <-
+babynames %>%
+group_by(name) %>% # group by name 
+summarise(sum.n = sum(n),
+          sum.year = length(unique(year)),
+          avg.n = sum.n/sum.year
+          ) %>%
+arrange(-avg.n) 
+
+head(BnamesByName,10)
+```
+
+So the highest used names are: James,John,Robert, Micheal, Mary.
+
+##3 For each name and sex combination, find the year in which the name had its greatest popularity and its rank in that year. Print all names that have been the most popular name in at least one year.
+
+First we need to group data by year and rank by proportion. The rank ==1 is the greatest popular one.  Next we group the above data by name and sex and find the min rank. Last we filter the data by rank ==1.
+
+
+```{r}
+
+BnamesByYearNameSex <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+arrange(rank) %>%
+select(year, name, sex, rank) %>%
+group_by(name, sex)%>%
+summarise(top.rank = min(rank) ,
+          top.year = year[which(rank==top.rank)][1]) %>%
+filter(top.rank == 1)
+          
+#head(BnamesByYearNameSex, 10)
+     
+BnamesByYearNameSex$name
+```
+
+
+##4 What name has been in the top 10 most often? (Hint: you may want to think about doing this in multiple steps. Think about what they should be before you start coding.) 
+
+First we group data by year and rank the names based on their proportions, so we will have a rank field to record this and the smaller the number the more popular. Secondly, we group the data by name and summerise the rank and sort the sum. Again, the smaller of the sum means the more popular of the names. 
+
+```{r}
+#Group data by year and get rank field
+#Filter data by rank <=10: find the top 10 popular names
+BnamesByYearRank <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+#arrange(rank) %>%
+  filter(rank <=10)
+
+head(BnamesByYearRank,10)
+
+#The number of names appear in the above data == the number of years that name appear in top 10
+#Get the top 10 most popular names
+
+tail(sort(table(BnamesByYearRank$name)),10)
+
+```
+
+
+##5 What name has had the biggest increase in popularity from one year to the next? What about the biggest decrease? In what years did these changes occur? Repeat for both boys and girls Is it better to use rank or proportion for this task? Why?
+
+It is better to use rank other than proportion since proportion may have missing values. use diff(lag = 1) to claculate the change of rank over year.
+
+```{r}
+BnamesByYearRankDiff <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+group_by(name) %>%
+  arrange(year) %>%
+mutate(rank.diff= c(0,diff(rank)))%>%
+summarise(max.diff =  max(rank.diff),
+          max.year = year[which(rank.diff == max.diff)][1],
+          min.diff = min(rank.diff),
+          min.year = year[which(rank.diff == min.diff)][1])
+  
+  
+head(BnamesByYearRankDiff %>% arrange(-max.diff))
+head(BnamesByYearRankDiff %>% arrange(min.diff))
+
+```
+
+The biggest increase of popularity is for name : Allison for year 2007-2008. 
+The biggest decrease of popularity is for name : Arianna for year 2007-2008.
+
+```{r}
+BnamesBoysDiff <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+filter(sex == "M") %>%
+  group_by(name) %>%
+  arrange(year) %>%
+mutate(rank.diff= c(0,diff(rank)))%>%
+summarise(max.diff =  max(rank.diff),
+          max.year = year[which(rank.diff == max.diff)][1],
+          min.diff = min(rank.diff),
+          min.year = year[which(rank.diff == min.diff)][1])
+
+  
+head(BnamesBoysDiff %>% arrange(-max.diff))
+head(BnamesBoysDiff %>% arrange(min.diff))
+
+BnamesGirlsDiff <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+filter(sex == "F") %>%
+  group_by(name) %>%
+  arrange(year) %>%
+mutate(rank.diff= c(0,diff(rank)))%>%
+summarise(max.diff =  max(rank.diff),
+          max.year = year[which(rank.diff == max.diff)][1],
+          min.diff = min(rank.diff),
+          min.year = year[which(rank.diff == min.diff)][1])
+
+  
+head(BnamesGirlsDiff %>% arrange(-max.diff))
+head(BnamesGirlsDiff %>% arrange(min.diff))
+
+
+```
+
+For boys: the biggest increase is for name: Barack from 2007-2008. The biggest decrease is for name: Brasen from 2006-2007.
+
+For girls: the biggest increase is for name: Jaslene from 2006-2007. The biggest decrease is for name: Jenascia from 2004-2005.
+
+##6 Make a plot showing the popularity of the 5 most popular names for each sex over time.
+
+
+```{r ggplot1,fig.width = 10, fig.height = 8, message=FALSE }
+#First : rank the name 
+BnamesByYearRank <-
+babynames %>%
+group_by(year)%>% # group by name year
+mutate(rank = rank(prop, ties.method = "first"))%>% # missing values will be put last
+arrange(rank)
+
+#get the top 5 'boys' names based on rank
+
+BnamesBoysRank<- BnamesByYearRank %>%
+  filter(sex == "M" && rank <=10)
+
+#head(BnamesBoysRank)
+
+BnamesBoysRankName<- names(tail(sort(table(BnamesBoysRank$name)),5))
+
+#get the top 5 girls' names based on rank
+
+BnamesGirlsRank<- BnamesByYearRank %>%
+  filter(sex == "F"  && rank <=10)
+
+#head(BnamesGirlsRank)
+
+BnamesGirlsRankName<- names(tail(sort(table(BnamesGirlsRank$name)),5))
+
+#Second: Filter the data with the top  names and sex
+#boys
+BnamesBoysTop <- babynames[which(babynames$name %in% c(BnamesBoysRankName)),] %>% filter(sex == "M")
+
+head(BnamesBoysTop)
+#girls
+BnamesGirlsTop <- babynames[which(babynames$name %in% c(BnamesGirlsRankName)),] %>% filter(sex == "F")
+
+head(BnamesGirlsTop)
+#Third : plot
+#Boys
+ggplot(aes(x= year), data = BnamesBoysTop)+
+  geom_line(aes(y = prop, color = name)) 
+
+#Boys
+ggplot(aes(x= year), data = BnamesGirlsTop)+
+  geom_line(aes(y = prop, color = name)) 
+
+```
+
+##7 Some names have been relatively popular for both boys and girls (sometimes in different years). Find the top 10 such names (you will have to define ?top?) and create a plot showing the popularity of these ten names for boys and girls over time. Are there any patterns?
+
+```{r}
+#Get the popular names for both boys and girls
+#Boys name and count
+BnamesBoysRankName<-sort(table(BnamesBoysRank$name))
+
+BnamesBoys <- matrix(0, nrow= length(BnamesBoysRankName), ncol = 2 )
+
+colnames(BnamesBoys) <- c("name","count")
+
+BnamesBoys[,1]<- names(BnamesBoysRankName)
+
+BnamesBoys[,2] <- as.numeric(BnamesBoysRankName)
+
+head(BnamesBoys)
+
+#Girls: name and count
+BnamesGirlsRankName<-sort(table(BnamesGirlsRank$name))
+
+BnamesGirls <- matrix(0, nrow= length(BnamesGirlsRankName), ncol = 2 )
+
+colnames(BnamesGirls) <- c("name","count")
+
+BnamesGirls[,1]<- names(BnamesGirlsRankName)
+
+BnamesGirls[,2] <- as.numeric(BnamesGirlsRankName)
+
+head(BnamesGirls)
+
+#Find the popular name for both boys and girls by merge()
+BnamesBoth<-merge(BnamesBoys,BnamesGirls ,by = "name",all.x=FALSE, all.y=FALSE) 
+
+BnamesBoth$sum.count <- as.numeric(BnamesBoth$count.x)+as.numeric(BnamesBoth$count.y)
+
+
+BnamesBothSort<-arrange(BnamesBoth, -sum.count)
+
+head(BnamesBothSort,10)
+
+#Filter data by the above names
+BnamesBothData <- babynames[which(babynames$name %in% c(as.character(BnamesBothSort[1:10,]$name))),] 
+
+head(BnamesBothData,10)
+
+# Plot
+ggplot(aes(x= year), data = BnamesBothData)+
+  geom_line(aes(y = prop, color = name)) 
+```

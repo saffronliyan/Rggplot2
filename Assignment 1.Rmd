@@ -1,0 +1,234 @@
+---
+title: "R ggplot2 Assignment 1"
+author: Yan Li
+date: July 31 2015
+output: word_document
+---
+
+We first have to load the Required packages.
+
+```{r}
+#Load required packages in the user-defined library location
+.libPaths("C:/work/Rpackages/R3.2.1")
+suppressMessages(library(ggplot2, quietly = T))
+suppressMessages(library(dplyr, quietly = T))
+suppressMessages(library(mosaicData, quietly = T))
+```
+
+
+The data used for this assignment is mpg from ggplot2 package.
+
+```{r}
+#Show the top 6 rows of the mpg data to know the data information
+head(mpg)
+```
+
+Question 1: Which manufacturers makes which types of cars?
+
+This is about the relationship between manufacture and class.
+
+From the following table we will see the car type in each manufacturer for the mpg data.
+```{r}
+table(mpg$manufacturer, mpg$class)
+```
+
+The bar plot summary the above in graph:
+
+```{r ggplot, fig.width = 10, fig.height = 8, message=FALSE }
+# bar plot by ggplot()
+ggplot(data = mpg, aes(x=manufacturer,fill=class))+  geom_bar(binwidth = 0.2, color = "black")
+```
+
+Question 2: What is the relationship between city and highway mpg?
+
+We can make a scatter plot to check the relationship of two variables.
+
+```{r qplot,fig.width = 8, fig.height = 6, message=FALSE}
+qplot(cty,hwy,data = mpg, alpha = I(.2),size = I(5),color = I("blue"), shape = I(20))
+```
+
+The plot shows a linear (increasing) relationship between city and highway mpg.
+
+Question3: How does displacement per cylinder vary across car types?
+
+This needs to include a calculation : displ/cyl in the plot. 
+
+```{r qplot2, fig.width = 8, fig.height = 6, message=FALSE }
+# bar plot by qplot()
+qplot(class,displ/cyl,data = mpg)+geom_boxplot()
+```
+
+The above plot shows: 2seater has the highest displacement per cylinder; compact and subcompact have the lowest displacement per cylinder.
+
+Question 4: Make a graphical league table ranking models by their fuel economy.
+
+First, I rank all models alphabetically and found there are 38 of them. I divided them into 4 leagues, each of which has about 10 models.
+
+```{r}
+#Divide all models into 4 leagues:
+modelLevels <- levels(mpg$model)
+League1 <-modelLevels[1:10] 
+League2 <-modelLevels[11:20] 
+League3 <-modelLevels[21:30] 
+League4 <-modelLevels[31:38] 
+```
+
+Then I subset the mpg data according to the model names in each league and rank them based on hwy (high way miles per gallon).
+
+
+```{r qplot3,fig.width = 8, fig.height = 6, message=FALSE }
+#The mdoel ranking of the first league
+data1 <- mpg[which(mpg$model %in% League1),c("model","hwy","fl")]
+orderedModel1 <- reorder(data1$model,data1$hwy)
+qplot(x=orderedModel1, y=hwy,data = data1,
+      geom =c( "boxplot"))
+```
+
+
+```{r qplot4,fig.width = 8, fig.height = 6, message=FALSE }
+#The mdoel ranking of the second league
+data2 <- mpg[which(mpg$model %in% League2),c("model","hwy","fl")]
+orderedModel2 <- reorder(data2$model,data2$hwy)
+qplot(x=orderedModel2, y=hwy,data = data2,
+      geom =c( "boxplot"))
+```
+
+
+```{r qplot5,fig.width = 8, fig.height = 6, message=FALSE }
+#The mdoel ranking of the third league
+data3 <- mpg[which(mpg$model %in% League3),c("model","hwy","fl")]
+orderedModel3 <- reorder(data3$model,data3$hwy)
+qplot(x=orderedModel3, y=hwy,data = data3,
+      geom =c( "boxplot"))
+```
+
+
+```{r qplot6,fig.width = 8, fig.height = 6, message=FALSE }
+#The mdoel ranking of the fourth league
+data4 <- mpg[which(mpg$model %in% League4),c("model","hwy","fl")]
+orderedModel4 <- reorder(data4$model,data4$hwy)
+qplot(x=orderedModel4, y=hwy,data = data4,
+      geom =c( "boxplot"))
+```
+
+Question 5: Which cars have particularly good fuel economy given their engine size? What sort of cars are they?
+
+I use hwy/cyl as a new measure to reorder the model.
+
+```{r qplot7,fig.width = 20, fig.height = 6, message=FALSE}
+orderedModelNew <- reorder(mpg$model,mpg$hwy/mpg$cyl)
+qplot(x=orderedModelNew, y=hwy/cyl,data = mpg,
+      geom =c( "boxplot"))
+```
+
+The high hwy/cyl means better fuel efficiency per cylinder. The top six ones are : corola, civic, new bettle, jetta,impreza awd and gti.Inorder to examine these cars, I extract them from the mpg data and check each feature:
+
+```{r}
+#Best model names:
+bestModels <- c("corola","civic", "new bettle", "jetta","impreza awd","gti")
+
+#extract data containing these cars
+bestModels_data<-mpg[which(mpg$model %in% bestModels),]
+```
+
+```{r}
+#Check the car class
+table(bestModels_data$class)
+```
+
+```{r}
+#Check the cylinder
+table(bestModels_data$cyl)
+```
+
+```{r}
+#Check the fuel type
+table(bestModels_data$fl)
+```
+
+```{r}
+#Check the transmission
+table(bestModels_data$trans)
+```
+
+```{r}
+#Check the manufacturer
+table(bestModels_data$manufacturer)
+```
+
+Now I know these cars are most compact or subcompact cars, 4 cylinders,rugular fuel type and manual transimission. They are mainly from volswagen, honda and subra.
+
+The other approach is that, we can subset the data into four groups based on cylinders then rank the fuel efficiency individualy.
+
+The rank of 4 cylinders group:
+
+```{r qplot8,fig.width = 20, fig.height = 6, message=FALSE}
+datacyl4<- mpg[which(mpg$cyl == 4),]
+orderedModelCyl4 <- reorder(datacyl4$model,datacyl4$hwy)
+qplot(x=orderedModelCyl4, y=hwy,data = datacyl4,
+      geom =c( "boxplot"))
+```
+
+The best car is new beetle.
+
+The rank of 5 cylinders group:
+
+```{r qplot9,fig.width = 20, fig.height = 6, message=FALSE}
+datacyl5<- mpg[which(mpg$cyl == 5),]
+orderedModelCyl5 <- reorder(datacyl5$model,datacyl5$hwy)
+qplot(x=orderedModelCyl5, y=hwy,data = datacyl5,
+      geom =c( "boxplot"))
+```
+
+The best one is jetta.
+
+The rank of 6 cylinders group:
+
+```{r qplot10,fig.width = 20, fig.height = 6, message=FALSE}
+datacyl6<- mpg[which(mpg$cyl == 6),]
+orderedModelCyl6 <- reorder(datacyl6$model,datacyl6$hwy)
+qplot(x=orderedModelCyl6, y=hwy,data = datacyl6,
+      geom =c( "boxplot"))
+```
+
+The best one in 6 cylinders is malibu.
+
+The rank of 8 cylinders group:
+
+```{r qplot11,fig.width = 20, fig.height = 6, message=FALSE}
+datacyl8<- mpg[which(mpg$cyl == 8),]
+orderedModelCyl8 <- reorder(datacyl8$model,datacyl8$hwy)
+qplot(x=orderedModelCyl8, y=hwy,data = datacyl8,
+      geom =c( "boxplot"))
+```
+
+The best one in 8 cylinders group is grand pix.
+
+We can follow similar way to check these cars:
+
+```{r}
+bestModels <- c("new bettle", "jetta",
+                        "malibu","grand pix")
+
+bestModels_data<-mpg[which(mpg$model %in% bestModels),]
+```
+
+```{r}
+table(bestModels_data$class)
+```
+```{r}
+table(bestModels_data$cyl)
+```
+```{r}
+table(bestModels_data$fl)
+```
+```{r}
+table(bestModels_data$trans)
+```
+```{r}
+table(bestModels_data$manufacturer)
+```
+
+Question 6:Does any manufacturer stick out because of the fuel efficiency of their cars? What makes their fuel economy so good?
+
+From question 5, we know volswagen is the best in fuel economy. 
